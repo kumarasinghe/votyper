@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "votyper"
+description = "Real-time voice typing app for Linux: press a hotkey, speak, and your words are typed live into any text field."
+keywords = ["voice typing", "dictation", "speech to text", "real-time", "linux", "wayland", "x11", "offline", "moonshine"]
+readme = "README.md"
+dynamic = ["version"]              # read from votyper/__init__.py
+requires-python = ">=3.10"
+dependencies = ["moonshine-voice"]
+classifiers = [
+    "Operating System :: POSIX :: Linux",
+    "Environment :: X11 Applications",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+
+[project.urls]
+Homepage = "https://github.com/kumarasinghe/votyper"
+
+[project.scripts]
+votyper = "votyper.app:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "votyper.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["votyper*"]
+
+[tool.setuptools.package-data]
+votyper = ["assets/*.png"]
