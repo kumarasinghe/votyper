@@ -54,3 +54,8 @@ Read the log: `~/.local/state/votyper/votyper.log`
 **Good to know:** the hotkey is also seen by the app you are typing in, so choose keys
 that app ignores. Typing assumes a US keyboard layout and skips characters outside
 plain ASCII.
+
+## License
+
+Votyper is open source under the [MIT License](LICENSE). The Moonshine speech model is a
+separate project with its own license terms; see [moonshine.ai](https://www.moonshine.ai).
