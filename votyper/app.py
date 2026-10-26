@@ -8,6 +8,7 @@ from . import __version__, config
 from .blinker import Blinker
 from .hotkey import Hotkey
 from .hotkeys import HotkeyMatcher
+from .idle import IdleTimer
 from .keyboard import Keyboard, KeyListener
 from .live_typer import LiveTyper
 from .logs import log, setup as setup_logging
@@ -18,12 +19,13 @@ from .ui import UI
 
 
 DEFAULT_HOTKEY = "ctrl+space"
+IDLE_UNLOAD_SECONDS = 20 * 60       # free the speech model after this long without use
 
 
 class App:
     def __init__(self, hotkey: Hotkey):
         self.hotkey = hotkey
-        self.state = "loading"              # loading -> idle <-> listening
+        self.state = "loading"              # loading -> idle <-> listening; idle -> sleeping -> idle
         self._lock = threading.Lock()
         self.ui = UI()
         self.keyboard, self.listener, self.tray = Keyboard(), KeyListener(), Tray()
@@ -31,6 +33,7 @@ class App:
         self.typer = LiveTyper(self.keyboard)
         self.dictation = Dictation(self._heard)
         self.blinker = Blinker(self._blink)     # reminds you that it is listening
+        self.idle = IdleTimer(IDLE_UNLOAD_SECONDS, self._unload_model)
 
     def run(self) -> None:
         self._bind_hotkey()
@@ -48,7 +51,10 @@ class App:
         self.matcher.bind(self.hotkey, self.toggle)
 
     def _tooltip(self) -> str:
-        return f"{self.state} - press {str(self.hotkey).upper()} to start/stop"
+        keys = str(self.hotkey).upper()
+        if self.state == "sleeping":
+            return f"sleeping to save memory - press {keys} to wake up and start"
+        return f"{self.state} - press {keys} to start/stop"
 
     def _set_state(self, state: str) -> None:
         self.state = state
@@ -62,6 +68,7 @@ class App:
         log.info("loading speech model...")
         self.dictation.load()
         self._set_state("idle")
+        self.idle.restart()
         log.info("ready. Press %s to start/stop. Click the tray icon for settings.", self.hotkey)
 
     def _heard(self, line_id: int, text: str) -> None:
@@ -72,10 +79,35 @@ class App:
         with self._lock:
             if self.state == "listening":
                 self._stop_listening()
-            elif self.state == "idle":      # ignored while the model is still loading
+            elif self.state == "idle":      # ignored while the model is loading
                 self._start_listening()
+            elif self.state == "sleeping":
+                self._wake_and_start()
+
+    def _wake_and_start(self) -> None:
+        """Bring the model back, then start listening, all from one key press."""
+        self._set_state("loading")
+        log.info("waking up: loading the speech model")
+        try:
+            self.dictation.load()
+        except Exception:
+            log.exception("could not load the speech model")
+            self._set_state("sleeping")
+            return
+        self._set_state("idle")
+        self._start_listening()
+
+    def _unload_model(self) -> None:
+        """Runs after IDLE_UNLOAD_SECONDS of quiet: free the model's memory."""
+        with self._lock:
+            if self.state != "idle":        # something started in the meantime
+                return
+            self.dictation.unload()
+            self._set_state("sleeping")
+            log.info("unloaded the speech model after %d minutes idle", IDLE_UNLOAD_SECONDS // 60)
 
     def _start_listening(self) -> None:
+        self.idle.cancel()
         self.typer.reset()
         play_start()
         self.dictation.start()
@@ -88,6 +120,7 @@ class App:
         self.typer.reset()
         play_stop()
         self._set_state("idle")
+        self.idle.restart()                 # the quiet period starts now
 
     # -- settings -------------------------------------------------------------
     def show_settings(self) -> None:
@@ -104,6 +137,7 @@ class App:
         self.matcher.capture(got)
 
     def _shutdown(self) -> None:
+        self.idle.cancel()
         self.blinker.stop()
         self.listener.close()
         self.tray.close()

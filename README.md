@@ -21,6 +21,8 @@ terminal, a chat window. It is speech-to-text dictation that works in every app.
   sounds mark the start and the stop.
 - **Your hotkey:** Ctrl+Space by default, and you can change it from the tray icon.
 - **Starts at login**, so it is always ready.
+- **Light on memory:** after 20 idle minutes it frees the speech model (about 500 MB), and
+  wakes it up again the next time you press the hotkey.
 - **Open source**, and small enough to read: plain Python, no heavy frameworks.
 - English only, for now.
 

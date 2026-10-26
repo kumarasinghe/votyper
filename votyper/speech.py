@@ -1,5 +1,6 @@
 """Microphone -> text, using Moonshine. Reports live text per utterance."""
 
+import gc
 from typing import Callable
 
 from .logs import log
@@ -43,7 +44,13 @@ class Dictation:
             self._mic.close()   # frees the audio device (mic indicator goes off)
             self._mic = None
 
-    def close(self) -> None:
+    def unload(self) -> None:
+        """Free the model's memory (about 475 MB); load() brings it back."""
         self.stop()
         if self._transcriber:
             self._transcriber.close()
+            self._transcriber = None
+            gc.collect()
+
+    def close(self) -> None:
+        self.unload()
