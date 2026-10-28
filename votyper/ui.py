@@ -1,9 +1,7 @@
 """Tk user interface: one small settings window. Tk must run on the main thread."""
 
 import base64
-import os
 import queue
-import subprocess
 
 from . import __version__
 from .icon import ICON_FILE, logo_png
@@ -11,33 +9,15 @@ from .logs import log
 from .meeting import MEETINGS_FOLDER
 
 CREDIT = "Speech recognition by Moonshine · moonshine.ai"
-PREFERRED_FONTS = ("Inter", "Noto Sans", "Ubuntu", "Cantarell", "Open Sans", "Roboto",
-                   "DejaVu Sans")      # the first one installed is used
+# Fonts found on most Linux desktops first, then the usual Windows and Mac ones.
+PREFERRED_FONTS = ("Noto Sans", "Ubuntu", "Cantarell", "DejaVu Sans", "Liberation Sans", "Arial",
+                   "Segoe UI", "Helvetica Neue", "Helvetica")
 FONT_SIZE = 11                      # the transcript is 3 bigger, small notes 2 smaller
 BACKGROUND, BORDER, MUTED = "#f6f5f4", "#cdc7c2", "#77767b"
 TOOLTIP_DELAY_MS = 400
 PUMP_WINDOW_MS = 100                # how often calls from other threads are run: window open
 PUMP_IDLE_MS = 250                  # ... and no window
 LOGO_SIZE = 28                       # pixels, next to the app name
-
-
-def desktop_font_family() -> str:
-    """The name of the font the desktop uses for its own windows ('' when unknown)."""
-    try:
-        gnome = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "font-name"],
-                               capture_output=True, text=True, timeout=2).stdout
-    except (OSError, subprocess.SubprocessError):
-        gnome = ""
-    if gnome:                                   # 'Cantarell 11'
-        return gnome.strip().strip("'").rsplit(" ", 1)[0]
-    try:
-        with open(os.path.expanduser("~/.config/kdeglobals"), encoding="utf-8") as f:
-            for line in f:                      # font=Noto Sans,10,-1,5,50,0,0,0,0,0
-                if line.startswith("font="):
-                    return line[5:].split(",")[0].strip()
-    except OSError:
-        pass
-    return ""
 
 
 class Tooltip:
@@ -105,10 +85,10 @@ class UI:
                         bordercolor=BORDER, arrowcolor="#5e5c64")
 
     def _choose_fonts(self) -> dict:
-        """Use the desktop's own font when we can find it; Tk's default looks dated."""
+        """Use the first common font that is installed; Tk's own default looks dated."""
         from tkinter import font
         installed = set(font.families(self._root))
-        family = next((name for name in [desktop_font_family(), *PREFERRED_FONTS]
+        family = next((name for name in PREFERRED_FONTS
                        if name in installed), None)
         if family:
             for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont"):

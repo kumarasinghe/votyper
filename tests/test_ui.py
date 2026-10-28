@@ -7,34 +7,6 @@ except ImportError:             # pragma: no cover
     UI = None
 
 
-class DesktopFontTest(unittest.TestCase):
-    def run_with(self, gsettings_output, kdeglobals=None):
-        import subprocess
-        import tempfile
-        from unittest import mock
-        from votyper.ui import desktop_font_family
-        with tempfile.TemporaryDirectory() as home:
-            if kdeglobals:
-                os.makedirs(os.path.join(home, ".config"))
-                with open(os.path.join(home, ".config", "kdeglobals"), "w") as f:
-                    f.write(kdeglobals)
-            result = subprocess.CompletedProcess([], 0, stdout=gsettings_output)
-            with mock.patch("votyper.ui.subprocess.run", return_value=result), \
-                    mock.patch.dict(os.environ, {"HOME": home}):
-                return desktop_font_family()
-
-    def test_reads_the_gnome_font(self):
-        self.assertEqual(self.run_with("'Cantarell 11'\n"), "Cantarell")
-        self.assertEqual(self.run_with("'Noto Sans Display 10'\n"), "Noto Sans Display")
-
-    def test_reads_the_kde_font(self):
-        self.assertEqual(self.run_with("", "[General]\nfont=Noto Sans,10,-1,5,50,0,0,0,0,0\n"),
-                         "Noto Sans")
-
-    def test_unknown_desktop_gives_nothing(self):
-        self.assertEqual(self.run_with(""), "")
-
-
 @unittest.skipUnless(UI and os.environ.get("DISPLAY"), "needs tkinter and a display")
 class TranscriptWindowTest(unittest.TestCase):
     def setUp(self):
