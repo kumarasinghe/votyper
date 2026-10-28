@@ -67,7 +67,7 @@ While a meeting runs:
 - The text is saved in `~/.votyper/meetings/<UTC start time>.txt`, for example
   `~/.votyper/meetings/20261028T143005Z.txt`. Only you can read the file.
   There is one file per meeting, with one sentence per line.
-- **Open folder** shows the transcripts folder in your file manager (it works on Linux, macOS and Windows).
+- **Open folder** shows the transcripts folder in your file manager.
 
 ### Uninstall
 
