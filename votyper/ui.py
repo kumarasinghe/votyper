@@ -14,6 +14,8 @@ PREFERRED_FONTS = ("Inter", "Noto Sans", "Ubuntu", "Cantarell", "Open Sans", "Ro
 FONT_SIZE = 10
 BACKGROUND, BORDER, MUTED = "#f6f5f4", "#cdc7c2", "#77767b"
 TOOLTIP_DELAY_MS = 400
+PUMP_WINDOW_MS = 100                # how often calls from other threads are run: window open
+PUMP_IDLE_MS = 250                  # ... and no window
 LOGO_SIZE = 28                       # pixels, next to the app name
 
 
@@ -65,7 +67,7 @@ class UI:
         self._text = self._meeting_button = self._status = None   # the window's widgets
         self._meeting_on = False
         self._meeting_path = ""             # the last transcript file, shown under the text
-        self._root.after(50, self._pump)
+        self._root.after(PUMP_IDLE_MS, self._pump)
 
     def _apply_style(self) -> None:
         """Flat, light, GNOME-like look. Tk cannot use GTK themes, so we style its own 'clam'."""
@@ -111,7 +113,10 @@ class UI:
                 self._calls.get()()
             except Exception as e:
                 log.error("ui error: %s", e)
-        self._root.after(50, self._pump)    # also lets Ctrl+C reach Python
+        # Polling also lets Ctrl+C reach Python. Poll slowly while no window is open:
+        # the app idles in the tray most of the time.
+        delay = PUMP_WINDOW_MS if self._window_open() else PUMP_IDLE_MS
+        self._root.after(delay, self._pump)
 
     # -- settings dialog ------------------------------------------------------
     def show_settings(self, hotkey, record, cancel_record, on_meeting, on_open_folder, on_quit,
