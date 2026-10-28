@@ -9,7 +9,45 @@ from .logs import log
 from .meeting import MEETINGS_FOLDER
 
 CREDIT = "Speech recognition by Moonshine · moonshine.ai"
+PREFERRED_FONTS = ("Inter", "Noto Sans", "Ubuntu", "Cantarell", "Open Sans", "Roboto",
+                   "DejaVu Sans")      # the first one installed is used
+FONT_SIZE = 10
+TOOLTIP_DELAY_MS = 400
 LOGO_SIZE = 28                       # pixels, next to the app name
+
+
+class Tooltip:
+    """A small note that appears when the pointer rests on a widget."""
+
+    def __init__(self, widget, text):
+        self._widget, self._text = widget, text     # text: a function, so it is always current
+        self._after = self._tip = None
+        widget.bind("<Enter>", self._schedule, add="+")
+        widget.bind("<Leave>", self._hide, add="+")
+        widget.bind("<ButtonPress>", self._hide, add="+")
+
+    def _schedule(self, _event) -> None:
+        self._hide()
+        self._after = self._widget.after(TOOLTIP_DELAY_MS, self._show)
+
+    def _show(self) -> None:
+        import tkinter as tk
+        tip = self._tip = tk.Toplevel(self._widget)
+        tip.wm_overrideredirect(True)
+        tip.attributes("-topmost", True)
+        tk.Label(tip, text=self._text(), background="#ffffe0", relief="solid",
+                 borderwidth=1, padx=6, pady=2).pack()
+        x = self._widget.winfo_rootx()
+        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
+        tip.wm_geometry(f"+{x}+{y}")
+
+    def _hide(self, _event=None) -> None:
+        if self._after:
+            self._widget.after_cancel(self._after)
+            self._after = None
+        if self._tip:
+            self._tip.destroy()
+            self._tip = None
 
 
 class UI:
@@ -18,12 +56,26 @@ class UI:
         self._tk = tk
         self._root = tk.Tk()
         self._root.withdraw()               # no main window, only the dialog
+        self._fonts = self._choose_fonts()
         self._calls = queue.SimpleQueue()
         self._dialog = None
         self._text = self._meeting_button = self._status = None   # the window's widgets
         self._meeting_on = False
         self._meeting_path = ""             # the last transcript file, shown under the text
         self._root.after(50, self._pump)
+
+    def _choose_fonts(self) -> dict:
+        """Use a clean sans font when the system has one; Tk's own default looks dated."""
+        from tkinter import font
+        installed = set(font.families(self._root))
+        family = next((name for name in PREFERRED_FONTS if name in installed), None)
+        base = font.nametofont("TkDefaultFont")
+        if family:
+            for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont"):
+                font.nametofont(name).configure(family=family, size=FONT_SIZE)
+        family = family or base.actual("family")
+        return {"title": (family, FONT_SIZE + 5, "bold"), "small": (family, FONT_SIZE - 1),
+                "text": (family, FONT_SIZE + 1)}
 
     # -- thread-safe entry points -------------------------------------------
     def post(self, fn) -> None:
@@ -63,14 +115,14 @@ class UI:
         win.minsize(420, 380)
         win.attributes("-topmost", True)
         self._set_icon(win)
-        shown = tk.StringVar(value=str(hotkey).upper())
+        current_hotkey = tk.StringVar(value=str(hotkey).upper())
         recording = tk.BooleanVar(value=False)
         self._meeting_path = meeting_path or self._meeting_path
 
         def finish(new_hotkey=None):
             recording.set(False)
             if new_hotkey:
-                shown.set(str(new_hotkey).upper())
+                current_hotkey.set(str(new_hotkey).upper())
             change.config(text="Change hotkey…")
 
         def on_change():
@@ -79,8 +131,7 @@ class UI:
                 finish()
                 return
             recording.set(True)
-            shown.set("Press the new keys…")
-            change.config(text="Cancel")
+            change.config(text="Press the new keys… (click to cancel)")
             record(lambda hk: self.post(lambda: finish(hk)))
 
         def on_close():
@@ -88,26 +139,23 @@ class UI:
             self._text = self._meeting_button = self._status = None
             win.destroy()
 
-        header = tk.Frame(win)              # the app name followed by the logo
-        header.pack(padx=20, pady=(14, 0))
-        tk.Label(header, text="Votyper", font=("TkDefaultFont", 14, "bold")).pack(side="left")
+        # The logo on the left, then the app name; the version on the right.
+        header = tk.Frame(win)
+        header.pack(fill="x", padx=20, pady=(14, 0))
         win.logo = tk.PhotoImage(data=base64.b64encode(logo_png(LOGO_SIZE)))  # keep alive
-        tk.Label(header, image=win.logo).pack(side="left", padx=(8, 0))
-        tk.Label(win, text=f"version {__version__}", font=("TkDefaultFont", 8),
-                 fg="gray50").pack()
-        hotkey_row = tk.Frame(win)
-        hotkey_row.pack(pady=(10, 0))
-        tk.Label(hotkey_row, text="Dictation hotkey").pack(side="left")
-        tk.Label(hotkey_row, textvariable=shown, font=("TkDefaultFont", 12, "bold")).pack(
-            side="left", padx=(8, 0))
+        tk.Label(header, image=win.logo).pack(side="left")
+        tk.Label(header, text="Votyper", font=self._fonts["title"]).pack(side="left", padx=(8, 0))
+        tk.Label(header, text=f"version {__version__}", font=self._fonts["small"],
+                 fg="gray50").pack(side="right")
 
         buttons = tk.Frame(win)             # all the buttons side by side, on top
         buttons.pack(padx=20, pady=8)
         change = tk.Button(buttons, text="Change hotkey…", command=on_change)
         change.pack(side="left", padx=4)
+        Tooltip(change, lambda: f"Current hotkey: {current_hotkey.get()}")
         self._meeting_button = tk.Button(buttons, command=on_meeting)
         self._meeting_button.pack(side="left", padx=4)
-        tk.Button(buttons, text="Open folder", command=on_open_folder).pack(side="left", padx=4)
+        tk.Button(buttons, text="Open transcriptions", command=on_open_folder).pack(side="left", padx=4)
         tk.Button(buttons, text="Quit votyper", command=on_quit).pack(side="left", padx=4)
 
         # The transcript fills the rest of the window. It can be selected and copied,
@@ -117,18 +165,62 @@ class UI:
         scrollbar = tk.Scrollbar(area)
         scrollbar.pack(side="right", fill="y")
         self._text = tk.Text(area, wrap="word", width=56, height=12, state="disabled",
+                             font=self._fonts["text"], padx=8, pady=6, relief="flat",
+                             highlightthickness=1, highlightbackground="gray75",
                              yscrollcommand=scrollbar.set)
         self._text.pack(side="left", fill="both", expand=True)
+        self._make_copyable(self._text)
         scrollbar.config(command=self._text.yview)
-        self._status = tk.Label(win, font=("TkDefaultFont", 8), fg="gray50",
+        self._status = tk.Label(win, font=self._fonts["small"], fg="gray50",
                                 wraplength=380, justify="left")
         self._status.pack(padx=20, pady=(4, 0), anchor="w")
-        tk.Label(win, text=CREDIT, font=("TkDefaultFont", 8), fg="gray50").pack(pady=(6, 12))
+        tk.Label(win, text=CREDIT, font=self._fonts["small"], fg="gray50").pack(pady=(6, 12))
 
         self._fill_transcript(lines, live)
         self._refresh_meeting_widgets()
         win.protocol("WM_DELETE_WINDOW", on_close)
         win.focus_force()
+
+    @staticmethod
+    def _make_copyable(text) -> None:
+        """Let the read-only text be selected and copied: Ctrl+C, Ctrl+A and a right-click menu.
+
+        Copying is done by hand instead of relying on Tk's defaults, which need the
+        text to have the keyboard focus (a read-only text does not always get it).
+        With nothing selected, Copy takes the whole transcript.
+        """
+        import tkinter as tk
+
+        def copy(_event=None):
+            try:
+                chosen = text.get("sel.first", "sel.last")
+            except tk.TclError:                 # nothing is selected
+                chosen = text.get("1.0", "end-1c")
+            text.clipboard_clear()
+            text.clipboard_append(chosen)
+            return "break"
+
+        def select_all(_event=None):
+            text.tag_add("sel", "1.0", "end-1c")
+            return "break"
+
+        def pressed(_event):
+            text.focus_set()
+
+        menu = tk.Menu(text, tearoff=False)
+        menu.add_command(label="Copy", command=copy)
+        menu.add_command(label="Select all", command=select_all)
+
+        def right_click(event):
+            text.focus_set()
+            menu.tk_popup(event.x_root, event.y_root)
+
+        text.bind("<Button-1>", pressed, add="+")
+        text.bind("<Button-3>", right_click)
+        for key in ("<Control-c>", "<Control-C>", "<<Copy>>"):
+            text.bind(key, copy)
+        for key in ("<Control-a>", "<Control-A>", "<<SelectAll>>"):
+            text.bind(key, select_all)
 
     # -- meeting transcript ---------------------------------------------------
     def _window_open(self) -> bool:

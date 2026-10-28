@@ -52,7 +52,7 @@ To change the hotkey, **click the tray icon** and press **Change hotkey…**.
 Use Meeting mode to follow and keep a transcript of a call or a meeting.
 
 1. **Click the tray icon** to open the Votyper window. The buttons are in one row at the top:
-   **Change hotkey…**, **Meeting mode**, **Open folder** and **Quit votyper**.
+   **Change hotkey…**, **Meeting mode**, **Open transcriptions** and **Quit votyper**.
 2. Press **Meeting mode**. You hear a sound and the tray icon blinks, the same as when you
    dictate. The button now says **Stop meeting**.
 3. What the microphone hears appears in the text area under the buttons, one sentence per
@@ -69,7 +69,7 @@ While a meeting runs:
 - The text is saved in `~/.votyper/meetings/<UTC start time>.txt`, for example
   `~/.votyper/meetings/20261028T143005Z.txt`. Only you can read the file.
   There is one file per meeting, with one sentence per line.
-- **Open folder** shows the transcripts folder in your file manager.
+- **Open transcriptions** shows the transcripts folder in your file manager.
 
 ### Uninstall
 

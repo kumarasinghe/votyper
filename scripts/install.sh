@@ -230,7 +230,8 @@ install_uv() {
 create_environment() {
     say "Creating a private Python $PYTHON_VERSION environment in $INSTALL_DIR"
     export UV_PYTHON_INSTALL_DIR="$INSTALL_DIR/python"   # keep uv's Python inside our folder
-    "$UV" venv --python "$PYTHON_VERSION" "$VENV_DIR"
+    # --clear: replace an environment from an earlier install without asking
+    "$UV" venv --clear --python "$PYTHON_VERSION" "$VENV_DIR"
 }
 
 install_votyper() {
