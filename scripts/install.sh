@@ -38,6 +38,7 @@ UNINSTALL=0
 
 # Filled in as the install runs.
 ARCH=""
+STARTED=0                   # 1 once start_votyper has it running
 UV=""
 SOURCE_DIR=""       # the project files to install
 WORK_DIR=""         # scratch space, removed when the script ends
@@ -351,10 +352,23 @@ start_votyper() {
     sleep 2
 
     if pgrep -f "$VENV_DIR/bin/python" > /dev/null; then
+        STARTED=1
         say "Installed and started. Votyper is loading; its tray icon shows when it is ready."
     else
         warn "Votyper did not stay running. See ~/.local/state/$APP/$APP.log"
     fi
+}
+
+
+# Tell the user how to try it.
+show_how_to_try() {
+    if [ "$STARTED" = 1 ]; then
+        say "Try it now: click into any text field and press Ctrl+Space, then speak."
+    else
+        say "Once Votyper is running: click into any text field and press Ctrl+Space, then speak."
+    fi
+    echo "    Press Ctrl+Space again to stop."
+    echo "    Click the tray icon to change the hotkey or use Meeting mode."
 }
 
 
@@ -417,6 +431,7 @@ main() {
     download_model
     install_launchers
     start_votyper
+    show_how_to_try
 }
 
 # Run when executed or piped from curl (no script file), but not when sourced for testing.
