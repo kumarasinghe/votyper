@@ -13,7 +13,7 @@ class TranscriptWindowTest(unittest.TestCase):
         self.ui = UI()
         self.addCleanup(self.ui._root.destroy)
         self.ui.show_settings("ctrl+space", lambda done: None, lambda: None, lambda: None,
-                              lambda: None)
+                              lambda: None, lambda: None)
 
     def shown(self):
         return self.ui._text.get("1.0", "end-1c")
@@ -47,7 +47,7 @@ class TranscriptWindowTest(unittest.TestCase):
         self.ui._root.update()
         buttons = [w for w in self.ui._dialog.winfo_children()[3].winfo_children()]
         ys = {b.winfo_y() for b in buttons}
-        self.assertEqual(len(buttons), 3)
+        self.assertEqual(len(buttons), 4)
         self.assertEqual(len(ys), 1)
         self.assertLess(buttons[0].winfo_rooty(), self.ui._text.winfo_rooty())
 
@@ -55,7 +55,7 @@ class TranscriptWindowTest(unittest.TestCase):
         self.ui._dialog.destroy()
         self.ui._text = None
         self.ui.show_settings("ctrl+space", lambda d: None, lambda: None, lambda: None,
-                              lambda: None, "/tmp/x.txt", ["one", "two"], "thr")
+                              lambda: None, lambda: None, "/tmp/x.txt", ["one", "two"], "thr")
         self.assertEqual(self.shown(), "one\ntwo\nthr")
 
 

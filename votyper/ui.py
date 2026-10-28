@@ -45,14 +45,14 @@ class UI:
         self._root.after(50, self._pump)    # also lets Ctrl+C reach Python
 
     # -- settings dialog ------------------------------------------------------
-    def show_settings(self, hotkey, record, cancel_record, on_meeting, on_quit,
+    def show_settings(self, hotkey, record, cancel_record, on_meeting, on_open_folder, on_quit,
                       meeting_path="", lines=(), live="") -> None:
         """Window with a row of buttons (hotkey, Meeting mode, Quit) above the live transcript.
 
         record(done): start listening for a key combination; calls done(hotkey)
         from any thread. cancel_record(): stop listening. on_meeting(): start or
-        stop the meeting. meeting_path, lines and live fill the transcript when the
-        window is opened in the middle of a meeting (or after one).
+        stop the meeting. on_open_folder(): show the saved transcripts.
+        meeting_path, lines and live fill the transcript when the window is opened in the middle of a meeting (or after one).
         """
         if self._window_open():
             self._dialog.lift()
@@ -107,6 +107,7 @@ class UI:
         change.pack(side="left", padx=4)
         self._meeting_button = tk.Button(buttons, command=on_meeting)
         self._meeting_button.pack(side="left", padx=4)
+        tk.Button(buttons, text="Open folder", command=on_open_folder).pack(side="left", padx=4)
         tk.Button(buttons, text="Quit votyper", command=on_quit).pack(side="left", padx=4)
 
         # The transcript fills the rest of the window. It can be selected and copied,

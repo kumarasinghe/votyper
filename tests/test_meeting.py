@@ -136,6 +136,23 @@ class AppMeetingTest(unittest.TestCase):
         self.app._blink(False)
         self.assertEqual(self.app.tray.update.call_args[0][0], "listening_dim")
 
+    def test_open_folder_button_shows_the_transcripts_folder(self):
+        with mock.patch("votyper.app.open_folder") as opener:
+            self.app.show_settings()
+            on_open_folder = self.app.ui.show_settings.call_args[0][4]
+            on_open_folder()
+            opener.assert_called_once_with(self.app.meeting.folder)
+
+
+class OpenFolderTest(unittest.TestCase):
+    def test_creates_the_folder_and_asks_the_system_to_open_it(self):
+        from votyper.folders import open_folder
+        with tempfile.TemporaryDirectory() as base, mock.patch("votyper.folders.subprocess") as sp:
+            target = os.path.join(base, "meetings")
+            open_folder(target)
+            self.assertTrue(os.path.isdir(target))
+            self.assertEqual(sp.Popen.call_args[0][0][1], target)
+
 
 if __name__ == "__main__":
     unittest.main()

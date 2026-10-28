@@ -17,7 +17,7 @@ class Meeting:
     """
 
     def __init__(self, folder: str = MEETINGS_FOLDER):
-        self._folder = os.path.expanduser(folder)
+        self.folder = os.path.expanduser(folder)
         self._file = None
         self.path = ""
         self.lines = []             # finished sentences
@@ -25,7 +25,7 @@ class Meeting:
 
     def start(self) -> str:
         """Create the transcript file, named after the UTC start time. Returns its path."""
-        os.makedirs(self._folder, mode=0o700, exist_ok=True)
+        os.makedirs(self.folder, mode=0o700, exist_ok=True)
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         self.path = self._create_file(stamp)
         self.lines, self.live = [], ""
@@ -37,7 +37,7 @@ class Meeting:
         attempt = 1
         while True:
             suffix = "" if attempt == 1 else f"-{attempt}"
-            path = os.path.join(self._folder, f"{stamp}{suffix}.txt")
+            path = os.path.join(self.folder, f"{stamp}{suffix}.txt")
             try:
                 fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             except FileExistsError:

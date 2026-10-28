@@ -6,6 +6,7 @@ import threading
 
 from . import __version__, config
 from .blinker import Blinker
+from .folders import open_folder
 from .hotkey import Hotkey
 from .hotkeys import HotkeyMatcher
 from .idle import IdleTimer
@@ -26,7 +27,7 @@ IDLE_UNLOAD_SECONDS = 20 * 60       # free the speech model after this long with
 class App:
     def __init__(self, hotkey: Hotkey):
         self.hotkey = hotkey
-        self.state = "loading"              # loading -> idle <-> listening / meeting; idle -> sleeping -> idle
+        self.state = "loading"              # loading -> idle <-> listening / meeting; idle <-> sleeping
         self._lock = threading.Lock()
         self.ui = UI()
         self.keyboard, self.listener, self.tray = Keyboard(), KeyListener(), Tray()
@@ -166,7 +167,8 @@ class App:
     # -- settings -------------------------------------------------------------
     def show_settings(self) -> None:
         self.ui.show_settings(self.hotkey, self._record_hotkey, self.matcher.cancel_capture,
-                              self._toggle_meeting_in_background, self.ui.stop,
+                              self._toggle_meeting_in_background,
+                              lambda: open_folder(self.meeting.folder), self.ui.stop,
                               self.meeting.path, list(self.meeting.lines), self.meeting.live)
 
     def _toggle_meeting_in_background(self) -> None:
