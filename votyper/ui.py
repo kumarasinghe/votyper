@@ -12,7 +12,9 @@ CREDIT = "Speech recognition by Moonshine · moonshine.ai"
 # Fonts found on most Linux desktops first, then the usual Windows and Mac ones.
 PREFERRED_FONTS = ("Noto Sans", "Ubuntu", "Cantarell", "DejaVu Sans", "Liberation Sans", "Arial",
                    "Segoe UI", "Helvetica Neue", "Helvetica")
-FONT_SIZE = 11                      # the transcript is 3 bigger, small notes 2 smaller
+FONT_SIZE = 11                      # buttons and labels; small notes are 2 smaller
+TEXT_SIZE = 16                      # the transcript
+TEXT_ROWS = 16                      # how many lines of the transcript show
 BACKGROUND, BORDER, MUTED = "#f6f5f4", "#cdc7c2", "#77767b"
 TOOLTIP_DELAY_MS = 400
 PUMP_WINDOW_MS = 100                # how often calls from other threads are run: window open
@@ -95,7 +97,7 @@ class UI:
                 font.nametofont(name).configure(family=family, size=FONT_SIZE)
         family = family or font.nametofont("TkDefaultFont").actual("family")
         return {"title": (family, FONT_SIZE + 5, "bold"), "small": (family, FONT_SIZE - 2),
-                "text": (family, FONT_SIZE + 3)}
+                "text": (family, TEXT_SIZE)}
 
     # -- thread-safe entry points -------------------------------------------
     def post(self, fn) -> None:
@@ -135,7 +137,7 @@ class UI:
         tk, ttk = self._tk, self._ttk
         win = self._dialog = tk.Toplevel(self._root)
         win.title("votyper")
-        win.minsize(420, 380)
+        win.minsize(420, 460)
         win.configure(background=BACKGROUND)
         win.attributes("-topmost", True)
         self._set_icon(win)
@@ -188,7 +190,7 @@ class UI:
         area.pack(fill="both", expand=True, padx=20)
         scrollbar = ttk.Scrollbar(area)
         scrollbar.pack(side="right", fill="y")
-        self._text = tk.Text(area, wrap="word", width=56, height=12, state="disabled",
+        self._text = tk.Text(area, wrap="word", width=49, height=TEXT_ROWS, state="disabled",
                              font=self._fonts["text"], padx=8, pady=6, relief="flat",
                              highlightthickness=1, highlightbackground=BORDER,
                              yscrollcommand=scrollbar.set)
