@@ -19,6 +19,8 @@ terminal, a chat window. It is speech-to-text dictation that works in every app.
   internet is needed after installation.
 - **Easy to see:** a system tray icon blinks while Votyper is listening, and short
   sounds mark the start and the stop.
+- **Meeting mode:** a live transcript of a conversation, shown in a window and saved to a
+  text file, without typing anything into your apps.
 - **Your hotkey:** Ctrl+Space by default, and you can change it from the tray icon.
 - **Starts at login**, so it is always ready.
 - **Light on memory:** after 20 idle minutes it frees the speech model (about 500 MB), and
@@ -36,12 +38,39 @@ curl -fsSL https://raw.githubusercontent.com/kumarasinghe/votyper/main/scripts/i
 
 ### Use it
 
-1. Open **Votyper** from your app menu. It also starts at every login.
+1. The installer starts Votyper for you in the background, and it starts at every login. If it
+   is not running, open **Votyper** from your app menu. (If the installer asks you to log out
+   and back in for the `input` group, it starts at that login.)
 2. Click into any text field and press **Ctrl+Space**. You hear a sound and the tray icon
    blinks. Speak, and your words are typed as you talk.
 3. Press **Ctrl+Space** again to stop.
 
 To change the hotkey, **click the tray icon** and press **Change hotkey…**.
+
+### Meeting mode
+
+Use Meeting mode to follow and keep a transcript of a call or a meeting.
+
+1. **Click the tray icon** to open the Votyper window. The buttons are in one row at the top:
+   **Change hotkey…**, **Meeting mode**, **Open transcriptions** and **Quit votyper**.
+2. Press **Meeting mode**. You hear a sound and the tray icon blinks, the same as when you
+   dictate. The button now says **Stop meeting**.
+3. What the microphone hears appears in the text area under the buttons. The sentence you
+   are saying now is shown as it forms. A sentence ends at a full stop, question mark or
+   exclamation mark, and a blank line is added after it. A pause in the middle of a
+   sentence does not start a new line.
+4. Press **Stop meeting** to end it. The text stays in the window until you start the next meeting.
+
+While a meeting runs:
+
+- The dictation hotkey does nothing, and **nothing is typed into your apps**. If you were
+  dictating when you pressed **Meeting mode**, dictation stops first.
+- Each finished sentence is saved at once, so a crash loses at most the sentence being
+  spoken. You can close the window and open it again from the tray icon; the transcript is still there.
+- The text is saved in `~/.votyper/meetings/<UTC start time>.txt`, for example
+  `~/.votyper/meetings/20261028T143005Z.txt`. Only you can read the file.
+  There is one file per meeting: each sentence is followed by a blank line.
+- **Open transcriptions** shows the transcripts folder in your file manager.
 
 ### Uninstall
 

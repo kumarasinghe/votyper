@@ -38,6 +38,7 @@ UNINSTALL=0
 
 # Filled in as the install runs.
 ARCH=""
+STARTED=0                   # 1 once start_votyper has it running
 UV=""
 SOURCE_DIR=""       # the project files to install
 WORK_DIR=""         # scratch space, removed when the script ends
@@ -230,7 +231,8 @@ install_uv() {
 create_environment() {
     say "Creating a private Python $PYTHON_VERSION environment in $INSTALL_DIR"
     export UV_PYTHON_INSTALL_DIR="$INSTALL_DIR/python"   # keep uv's Python inside our folder
-    "$UV" venv --python "$PYTHON_VERSION" "$VENV_DIR"
+    # --clear: replace an environment from an earlier install without asking
+    "$UV" venv --clear --python "$PYTHON_VERSION" "$VENV_DIR"
 }
 
 install_votyper() {
@@ -323,6 +325,54 @@ install_launchers() {
 
 
 # ============================================================================
+# Step 7: start it now
+# ============================================================================
+
+# Start Votyper in the background so it keeps running after this script ends.
+# It is not started when it could not work yet (no desktop session, or the
+# `input` group is not active until the next login); then it starts at login.
+start_votyper() {
+    if [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+        say "Installed. Votyper starts at your next login (no desktop session here to start it in)."
+        return
+    fi
+    if ! in_input_group; then
+        say "Installed. Log out and back in; Votyper then starts by itself."
+        return
+    fi
+
+    # An older copy from a previous install would keep running the old code.
+    pkill -f "$VENV_DIR/bin/python" || true
+    sleep 1
+
+    # setsid: its own session, so closing this terminal does not stop it.
+    # No input and no output attached: it logs to ~/.local/state/votyper/votyper.log.
+    setsid "$BIN_DIR/$APP" > /dev/null 2>&1 < /dev/null &
+    disown
+    sleep 2
+
+    if pgrep -f "$VENV_DIR/bin/python" > /dev/null; then
+        STARTED=1
+        say "Installed and started. Votyper is loading; its tray icon shows when it is ready."
+    else
+        warn "Votyper did not stay running. See ~/.local/state/$APP/$APP.log"
+    fi
+}
+
+
+# Tell the user how to try it.
+show_how_to_try() {
+    if [ "$STARTED" = 1 ]; then
+        say "Try it now: click into any text field and press Ctrl+Space, then speak."
+    else
+        say "Once Votyper is running: click into any text field and press Ctrl+Space, then speak."
+    fi
+    echo "    Press Ctrl+Space again to stop."
+    echo "    Click the tray icon to change the hotkey or use Meeting mode."
+}
+
+
+# ============================================================================
 # Uninstall
 # ============================================================================
 
@@ -380,8 +430,8 @@ main() {
     ensure_input_access
     download_model
     install_launchers
-
-    say "Installed. Run: $APP"
+    start_votyper
+    show_how_to_try
 }
 
 # Run when executed or piped from curl (no script file), but not when sourced for testing.

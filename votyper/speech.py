@@ -5,7 +5,7 @@ from typing import Callable
 
 from .logs import log
 
-OnText = Callable[[int, str], None]   # (line_id, text so far)
+OnText = Callable[[int, str, bool], None]   # (line_id, text so far, line is finished)
 
 LANGUAGE = "en"
 
@@ -30,9 +30,9 @@ class Dictation:
         from moonshine_voice.mic_transcriber import MicTranscriber
         from moonshine_voice.transcriber import LineCompleted, LineTextChanged
         mic = MicTranscriber().use_transcriber(self._transcriber).update_interval(0.25)
-        # Both events carry the full text of the line, so one handler is enough.
+        # Both events carry the full text of the line; only LineCompleted is final.
         mic.add_listener(
-            lambda ev: self._on_text(ev.line.line_id, ev.line.text)
+            lambda ev: self._on_text(ev.line.line_id, ev.line.text, isinstance(ev, LineCompleted))
             if isinstance(ev, (LineTextChanged, LineCompleted)) else None)
         mic.on_error(lambda e: log.error("speech error: %s", e))
         self._mic = mic.load().start()

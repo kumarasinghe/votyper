@@ -6,12 +6,14 @@ import threading
 
 from . import __version__, config
 from .blinker import Blinker
+from .folders import open_folder
 from .hotkey import Hotkey
 from .hotkeys import HotkeyMatcher
 from .idle import IdleTimer
 from .keyboard import Keyboard, KeyListener
 from .live_typer import LiveTyper
 from .logs import log, setup as setup_logging
+from .meeting import Meeting
 from .sounds import play_start, play_stop
 from .speech import Dictation
 from .tray import Tray
@@ -25,13 +27,14 @@ IDLE_UNLOAD_SECONDS = 20 * 60       # free the speech model after this long with
 class App:
     def __init__(self, hotkey: Hotkey):
         self.hotkey = hotkey
-        self.state = "loading"              # loading -> idle <-> listening; idle -> sleeping -> idle
+        self.state = "loading"              # loading -> idle <-> listening / meeting; idle <-> sleeping
         self._lock = threading.Lock()
         self.ui = UI()
         self.keyboard, self.listener, self.tray = Keyboard(), KeyListener(), Tray()
         self.matcher = HotkeyMatcher()
         self.typer = LiveTyper(self.keyboard)
         self.dictation = Dictation(self._heard)
+        self.meeting = Meeting()
         self.blinker = Blinker(self._blink)     # reminds you that it is listening
         self.idle = IdleTimer(IDLE_UNLOAD_SECONDS, self._unload_model)
 
@@ -54,14 +57,17 @@ class App:
         keys = str(self.hotkey).upper()
         if self.state == "sleeping":
             return f"sleeping to save memory - press {keys} to wake up and start"
+        if self.state == "meeting":
+            return "meeting mode - transcribing and saving (hotkey is off)"
         return f"{self.state} - press {keys} to start/stop"
 
     def _set_state(self, state: str) -> None:
         self.state = state
         self.tray.update(state, self._tooltip())
+        self.ui.post(lambda: self.ui.show_meeting_mode(state == "meeting"))
 
     def _blink(self, bright: bool) -> None:
-        if self.state == "listening":
+        if self.state in ("listening", "meeting"):      # the same blink for both
             self.tray.update("listening" if bright else "listening_dim", self._tooltip())
 
     def _load_model(self) -> None:
@@ -71,21 +77,40 @@ class App:
         self.idle.restart()
         log.info("ready. Press %s to start/stop. Click the tray icon for settings.", self.hotkey)
 
-    def _heard(self, line_id: int, text: str) -> None:
+    def _heard(self, line_id: int, text: str, final: bool) -> None:
         log.debug("heard %r", text)
-        self.typer.update(line_id, text)
+        if self.state == "meeting":         # a meeting never types into other apps
+            finished = self.meeting.heard(text, final)
+            live = self.meeting.tail
+            self.ui.post(lambda: self.ui.show_transcript_line(finished, live))
+        else:
+            self.typer.update(line_id, text)
 
     def toggle(self) -> None:
+        """The hotkey: start or stop typing. It does nothing during a meeting."""
         with self._lock:
             if self.state == "listening":
                 self._stop_listening()
             elif self.state == "idle":      # ignored while the model is loading
                 self._start_listening()
             elif self.state == "sleeping":
-                self._wake_and_start()
+                self._wake_and_start(self._start_listening)
 
-    def _wake_and_start(self) -> None:
-        """Bring the model back, then start listening, all from one key press."""
+    def toggle_meeting(self) -> None:
+        """The Meeting mode button: start or stop the meeting."""
+        with self._lock:
+            if self.state == "meeting":
+                self._stop_meeting()
+            elif self.state == "listening":     # typing stops first
+                self._stop_listening()
+                self._start_meeting()
+            elif self.state == "idle":
+                self._start_meeting()
+            elif self.state == "sleeping":
+                self._wake_and_start(self._start_meeting)
+
+    def _wake_and_start(self, start) -> None:
+        """Bring the model back, then run start, all from one key press."""
         self._set_state("loading")
         log.info("waking up: loading the speech model")
         try:
@@ -95,7 +120,7 @@ class App:
             self._set_state("sleeping")
             return
         self._set_state("idle")
-        self._start_listening()
+        start()
 
     def _unload_model(self) -> None:
         """Runs after IDLE_UNLOAD_SECONDS of quiet: free the model's memory."""
@@ -122,10 +147,33 @@ class App:
         self._set_state("idle")
         self.idle.restart()                 # the quiet period starts now
 
+    def _start_meeting(self) -> None:
+        self.idle.cancel()
+        path = self.meeting.start()
+        self.ui.post(lambda: self.ui.start_transcript(path))
+        play_start()
+        self._set_state("meeting")          # from now on, speech goes to the transcript
+        self.dictation.start()
+        self.blinker.start()
+
+    def _stop_meeting(self) -> None:
+        self.blinker.stop()
+        self.dictation.stop()               # flushes the last words into the transcript
+        self.meeting.stop()
+        play_stop()
+        self._set_state("idle")
+        self.idle.restart()
+
     # -- settings -------------------------------------------------------------
     def show_settings(self) -> None:
         self.ui.show_settings(self.hotkey, self._record_hotkey, self.matcher.cancel_capture,
-                              self.ui.stop)
+                              self._toggle_meeting_in_background,
+                              lambda: open_folder(self.meeting.folder), self.ui.stop,
+                              self.meeting.path, list(self.meeting.lines), self.meeting.tail)
+
+    def _toggle_meeting_in_background(self) -> None:
+        """Loading the model can take seconds; the window must not freeze meanwhile."""
+        threading.Thread(target=self.toggle_meeting, daemon=True).start()
 
     def _record_hotkey(self, done) -> None:
         def got(hotkey: Hotkey) -> None:
@@ -142,6 +190,7 @@ class App:
         self.listener.close()
         self.tray.close()
         self.dictation.close()              # also releases the mic if listening
+        self.meeting.stop()                 # saves a sentence cut off by quitting
         self.keyboard.close()
 
 
