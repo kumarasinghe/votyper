@@ -12,6 +12,7 @@ CREDIT = "Speech recognition by Moonshine · moonshine.ai"
 PREFERRED_FONTS = ("Inter", "Noto Sans", "Ubuntu", "Cantarell", "Open Sans", "Roboto",
                    "DejaVu Sans")      # the first one installed is used
 FONT_SIZE = 10
+BACKGROUND, BORDER, MUTED = "#f6f5f4", "#cdc7c2", "#77767b"
 TOOLTIP_DELAY_MS = 400
 LOGO_SIZE = 28                       # pixels, next to the app name
 
@@ -53,16 +54,32 @@ class Tooltip:
 class UI:
     def __init__(self):
         import tkinter as tk
-        self._tk = tk
+        from tkinter import ttk        
+        self._tk, self._ttk = tk, ttk
         self._root = tk.Tk()
         self._root.withdraw()               # no main window, only the dialog
         self._fonts = self._choose_fonts()
+        self._apply_style()
         self._calls = queue.SimpleQueue()
         self._dialog = None
         self._text = self._meeting_button = self._status = None   # the window's widgets
         self._meeting_on = False
         self._meeting_path = ""             # the last transcript file, shown under the text
         self._root.after(50, self._pump)
+
+    def _apply_style(self) -> None:
+        """Flat, light, GNOME-like look. Tk cannot use GTK themes, so we style its own 'clam'."""
+        style = self._ttk.Style(self._root)
+        style.theme_use("clam")
+        style.configure(".", background=BACKGROUND, foreground="#2e3436")
+        style.configure("TButton", padding=(12, 6), background="#ffffff", bordercolor=BORDER,
+                        lightcolor="#ffffff", darkcolor="#ffffff", focuscolor=BACKGROUND)
+        style.map("TButton", background=[("pressed", "#dcdad6"), ("active", "#ecebea")])
+        style.configure("Danger.TButton", background="#c01c28", foreground="#ffffff",
+                        bordercolor="#a51d2d", lightcolor="#c01c28", darkcolor="#c01c28")
+        style.map("Danger.TButton", background=[("pressed", "#a51d2d"), ("active", "#d03340")])
+        style.configure("TScrollbar", background="#ffffff", troughcolor=BACKGROUND,
+                        bordercolor=BORDER, arrowcolor="#5e5c64")
 
     def _choose_fonts(self) -> dict:
         """Use a clean sans font when the system has one; Tk's own default looks dated."""
@@ -109,10 +126,11 @@ class UI:
         if self._window_open():
             self._dialog.lift()
             return
-        tk = self._tk
+        tk, ttk = self._tk, self._ttk
         win = self._dialog = tk.Toplevel(self._root)
         win.title("votyper")
         win.minsize(420, 380)
+        win.configure(background=BACKGROUND)
         win.attributes("-topmost", True)
         self._set_icon(win)
         current_hotkey = tk.StringVar(value=str(hotkey).upper())
@@ -140,41 +158,41 @@ class UI:
             win.destroy()
 
         # The logo on the left, then the app name; the version on the right.
-        header = tk.Frame(win)
+        header = ttk.Frame(win)
         header.pack(fill="x", padx=20, pady=(14, 0))
         win.logo = tk.PhotoImage(data=base64.b64encode(logo_png(LOGO_SIZE)))  # keep alive
-        tk.Label(header, image=win.logo).pack(side="left")
-        tk.Label(header, text="Votyper", font=self._fonts["title"]).pack(side="left", padx=(8, 0))
-        tk.Label(header, text=f"version {__version__}", font=self._fonts["small"],
-                 fg="gray50").pack(side="right")
+        ttk.Label(header, image=win.logo).pack(side="left")
+        ttk.Label(header, text="Votyper", font=self._fonts["title"]).pack(side="left", padx=(8, 0))
+        ttk.Label(header, text=f"version {__version__}", font=self._fonts["small"],
+                  foreground=MUTED).pack(side="right")
 
-        buttons = tk.Frame(win)             # all the buttons side by side, on top
+        buttons = ttk.Frame(win)             # all the buttons side by side, on top
         buttons.pack(padx=20, pady=8)
-        change = tk.Button(buttons, text="Change hotkey…", command=on_change)
+        change = ttk.Button(buttons, text="Change hotkey…", command=on_change)
         change.pack(side="left", padx=4)
         Tooltip(change, lambda: f"Current hotkey: {current_hotkey.get()}")
-        self._meeting_button = tk.Button(buttons, command=on_meeting)
+        self._meeting_button = ttk.Button(buttons, command=on_meeting)
         self._meeting_button.pack(side="left", padx=4)
-        tk.Button(buttons, text="Open transcriptions", command=on_open_folder).pack(side="left", padx=4)
-        tk.Button(buttons, text="Quit votyper", command=on_quit).pack(side="left", padx=4)
+        ttk.Button(buttons, text="Open transcriptions", command=on_open_folder).pack(side="left", padx=4)
+        ttk.Button(buttons, text="Quit votyper", command=on_quit).pack(side="left", padx=4)
 
         # The transcript fills the rest of the window. It can be selected and copied,
         # but not typed into.
-        area = tk.Frame(win)
+        area = ttk.Frame(win)
         area.pack(fill="both", expand=True, padx=20)
-        scrollbar = tk.Scrollbar(area)
+        scrollbar = ttk.Scrollbar(area)
         scrollbar.pack(side="right", fill="y")
         self._text = tk.Text(area, wrap="word", width=56, height=12, state="disabled",
                              font=self._fonts["text"], padx=8, pady=6, relief="flat",
-                             highlightthickness=1, highlightbackground="gray75",
+                             highlightthickness=1, highlightbackground=BORDER,
                              yscrollcommand=scrollbar.set)
         self._text.pack(side="left", fill="both", expand=True)
         self._make_copyable(self._text)
         scrollbar.config(command=self._text.yview)
-        self._status = tk.Label(win, font=self._fonts["small"], fg="gray50",
+        self._status = ttk.Label(win, font=self._fonts["small"], foreground=MUTED,
                                 wraplength=380, justify="left")
         self._status.pack(padx=20, pady=(4, 0), anchor="w")
-        tk.Label(win, text=CREDIT, font=self._fonts["small"], fg="gray50").pack(pady=(6, 12))
+        ttk.Label(win, text=CREDIT, font=self._fonts["small"], foreground=MUTED).pack(pady=(6, 12))
 
         self._fill_transcript(lines, live)
         self._refresh_meeting_widgets()
@@ -277,10 +295,10 @@ class UI:
             return
         button = self._meeting_button
         if self._meeting_on:
-            button.config(text="Stop meeting", relief="sunken")
+            button.config(text="Stop meeting", style="Danger.TButton")
             self._status.config(text=f"Meeting mode is on. The hotkey is off. Saving to {self._meeting_path}")
         else:
-            button.config(text="Meeting mode", relief="raised")
+            button.config(text="Meeting mode", style="TButton")
             if self._meeting_path:
                 self._status.config(text=f"Saved to {self._meeting_path}")
             else:

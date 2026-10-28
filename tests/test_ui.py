@@ -46,7 +46,7 @@ class TranscriptWindowTest(unittest.TestCase):
     def button_row(self):
         for child in self.ui._dialog.winfo_children():
             kids = child.winfo_children()
-            if kids and all(k.winfo_class() == "Button" for k in kids):
+            if kids and all(k.winfo_class() == "TButton" for k in kids):
                 return kids
         self.fail("no row of buttons")
 
