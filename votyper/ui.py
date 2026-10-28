@@ -13,7 +13,7 @@ CREDIT = "Speech recognition by Moonshine · moonshine.ai"
 PREFERRED_FONTS = ("Noto Sans", "Ubuntu", "Cantarell", "DejaVu Sans", "Liberation Sans", "Arial",
                    "Segoe UI", "Helvetica Neue", "Helvetica")
 FONT_SIZE = 11                      # buttons and labels; small notes are 2 smaller
-TEXT_SIZE = 16                      # the transcript
+TEXT_SIZE = 18                      # the transcript
 TEXT_ROWS = 16                      # how many lines of the transcript show
 BACKGROUND, BORDER, MUTED = "#f6f5f4", "#cdc7c2", "#77767b"
 TOOLTIP_DELAY_MS = 400
