@@ -38,7 +38,9 @@ curl -fsSL https://raw.githubusercontent.com/kumarasinghe/votyper/main/scripts/i
 
 ### Use it
 
-1. Open **Votyper** from your app menu. It also starts at every login.
+1. The installer starts Votyper for you in the background, and it starts at every login. If it
+   is not running, open **Votyper** from your app menu. (If the installer asks you to log out
+   and back in for the `input` group, it starts at that login.)
 2. Click into any text field and press **Ctrl+Space**. You hear a sound and the tray icon
    blinks. Speak, and your words are typed as you talk.
 3. Press **Ctrl+Space** again to stop.
