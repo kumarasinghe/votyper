@@ -22,11 +22,11 @@ class TranscriptWindowTest(unittest.TestCase):
         self.ui.show_transcript_line(None, "hel")
         self.ui.show_transcript_line(None, "hello")
         self.assertEqual(self.shown(), "hello")
-        self.ui.show_transcript_line("hello world", "")
+        self.ui.show_transcript_line("Hello world.", "")
         self.ui.show_transcript_line(None, "next")
-        self.assertEqual(self.shown(), "hello world\nnext")
-        self.ui.show_transcript_line("next one", "")
-        self.assertEqual(self.shown(), "hello world\nnext one\n")
+        self.assertEqual(self.shown(), "Hello world.\n\nnext")
+        self.ui.show_transcript_line("Next one.", "")
+        self.assertEqual(self.shown(), "Hello world.\n\nNext one.\n\n")
 
     def test_text_cannot_be_typed_into(self):
         self.assertEqual(str(self.ui._text.cget("state")), "disabled")
@@ -89,14 +89,14 @@ class TranscriptWindowTest(unittest.TestCase):
         self.ui._root.update()
         text.event_generate("<Control-a>")
         text.event_generate("<Control-c>")
-        self.assertEqual(self.ui._root.clipboard_get().strip(), "copy me\nand me")
+        self.assertEqual(self.ui._root.clipboard_get().strip(), "copy me\n\nand me")
         self.assertEqual(str(text.cget("state")), "disabled")
 
     def test_copy_takes_only_the_selection(self):
         self.ui.show_transcript_line("first", "")
         self.ui.show_transcript_line("second", "")
         text = self.ui._text
-        text.tag_add("sel", "2.0", "2.6")
+        text.tag_add("sel", "3.0", "3.6")
         text.event_generate("<<Copy>>")
         self.assertEqual(self.ui._root.clipboard_get(), "second")
 
@@ -118,7 +118,7 @@ class TranscriptWindowTest(unittest.TestCase):
         self.ui._text = None
         self.ui.show_settings("ctrl+space", lambda d: None, lambda: None, lambda: None,
                               lambda: None, lambda: None, "/tmp/x.txt", ["one", "two"], "thr")
-        self.assertEqual(self.shown(), "one\ntwo\nthr")
+        self.assertEqual(self.shown(), "one\n\ntwo\n\nthr")
 
 
 if __name__ == "__main__":

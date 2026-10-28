@@ -81,7 +81,7 @@ class App:
         log.debug("heard %r", text)
         if self.state == "meeting":         # a meeting never types into other apps
             finished = self.meeting.heard(text, final)
-            live = self.meeting.live
+            live = self.meeting.tail
             self.ui.post(lambda: self.ui.show_transcript_line(finished, live))
         else:
             self.typer.update(line_id, text)
@@ -169,7 +169,7 @@ class App:
         self.ui.show_settings(self.hotkey, self._record_hotkey, self.matcher.cancel_capture,
                               self._toggle_meeting_in_background,
                               lambda: open_folder(self.meeting.folder), self.ui.stop,
-                              self.meeting.path, list(self.meeting.lines), self.meeting.live)
+                              self.meeting.path, list(self.meeting.lines), self.meeting.tail)
 
     def _toggle_meeting_in_background(self) -> None:
         """Loading the model can take seconds; the window must not freeze meanwhile."""

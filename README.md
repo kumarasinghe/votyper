@@ -55,9 +55,10 @@ Use Meeting mode to follow and keep a transcript of a call or a meeting.
    **Change hotkey…**, **Meeting mode**, **Open transcriptions** and **Quit votyper**.
 2. Press **Meeting mode**. You hear a sound and the tray icon blinks, the same as when you
    dictate. The button now says **Stop meeting**.
-3. What the microphone hears appears in the text area under the buttons, one sentence per
-   line. The sentence you are saying now is shown as it forms, and it is added as a new
-   line when it is finished.
+3. What the microphone hears appears in the text area under the buttons. The sentence you
+   are saying now is shown as it forms. A sentence ends at a full stop, question mark or
+   exclamation mark, and a blank line is added after it. A pause in the middle of a
+   sentence does not start a new line.
 4. Press **Stop meeting** to end it. The text stays in the window until you start the next meeting.
 
 While a meeting runs:
@@ -68,7 +69,7 @@ While a meeting runs:
   spoken. You can close the window and open it again from the tray icon; the transcript is still there.
 - The text is saved in `~/.votyper/meetings/<UTC start time>.txt`, for example
   `~/.votyper/meetings/20261028T143005Z.txt`. Only you can read the file.
-  There is one file per meeting, with one sentence per line.
+  There is one file per meeting: each sentence is followed by a blank line.
 - **Open transcriptions** shows the transcripts folder in your file manager.
 
 ### Uninstall

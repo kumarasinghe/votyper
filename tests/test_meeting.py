@@ -35,33 +35,50 @@ class MeetingTest(unittest.TestCase):
         self.assertNotEqual(first, second)
         self.assertTrue(re.search(r"-2\.txt$", second))
 
-    def test_only_finished_sentences_reach_the_disk(self):
+    def test_only_finished_sentences_reach_the_disk_with_a_blank_line_after_each(self):
         self.meeting.start()
         self.assertIsNone(self.meeting.heard("hello wor", final=False))
         self.assertEqual(self.saved(), "")
-        self.assertEqual(self.meeting.live, "hello wor")
-        self.assertEqual(self.meeting.heard("hello world", final=True), "hello world")
-        self.assertEqual(self.meeting.heard("second one", final=True), "second one")
-        self.assertEqual(self.saved(), "hello world\nsecond one\n")
-        self.assertEqual(self.meeting.live, "")
+        self.assertEqual(self.meeting.tail, "hello wor")
+        self.assertEqual(self.meeting.heard("Hello world.", final=True), "Hello world.")
+        self.assertEqual(self.meeting.heard("How are you?", final=True), "How are you?")
+        self.assertEqual(self.saved(), "Hello world.\n\nHow are you?\n\n")
+        self.assertEqual(self.meeting.tail, "")
 
-    def test_empty_sentences_are_not_saved(self):
+    def test_a_pause_in_the_middle_of_a_sentence_does_not_split_it(self):
         self.meeting.start()
-        self.assertEqual(self.meeting.heard("  ", final=True), "")
+        self.assertIsNone(self.meeting.heard("We should move the", final=True))
+        self.assertEqual(self.meeting.tail, "We should move the")
+        self.meeting.heard("launch to", final=False)
+        self.assertEqual(self.meeting.tail, "We should move the launch to")
+        self.assertIsNone(self.meeting.heard("launch to", final=True))
+        self.assertEqual(self.saved(), "")
+        self.assertEqual(self.meeting.heard("next week.", final=True),
+                         "We should move the launch to next week.")
+        self.assertEqual(self.saved(), "We should move the launch to next week.\n\n")
+
+    def test_closing_quotes_after_the_full_stop_still_end_the_sentence(self):
+        self.meeting.start()
+        self.assertEqual(self.meeting.heard('He said "stop."', final=True), 'He said "stop."')
+
+    def test_empty_pieces_are_not_saved(self):
+        self.meeting.start()
+        self.assertIsNone(self.meeting.heard("  ", final=True))
         self.assertEqual(self.saved(), "")
 
     def test_stopping_saves_a_sentence_cut_off_mid_way(self):
         self.meeting.start()
+        self.meeting.heard("a half", final=True)
         self.meeting.heard("unfinished thought", final=False)
         self.meeting.stop()
-        self.assertEqual(self.saved(), "unfinished thought\n")
+        self.assertEqual(self.saved(), "a half unfinished thought\n\n")
 
     def test_stop_without_a_meeting_does_nothing(self):
         self.meeting.stop()
 
     def test_a_new_meeting_starts_with_an_empty_transcript(self):
         self.meeting.start()
-        self.meeting.heard("old", final=True)
+        self.meeting.heard("Old.", final=True)
         self.meeting.stop()
         self.meeting.start()
         self.assertEqual(self.meeting.lines, [])
@@ -103,9 +120,9 @@ class AppMeetingTest(unittest.TestCase):
 
     def test_speech_goes_to_the_transcript_and_is_never_typed(self):
         self.app.toggle_meeting()
-        self.app._heard(1, "hello there", True)
+        self.app._heard(1, "Hello there.", True)
         self.app.typer.update.assert_not_called()
-        self.assertEqual(self.app.meeting.lines, ["hello there"])
+        self.assertEqual(self.app.meeting.lines, ["Hello there."])
 
     def test_starting_a_meeting_stops_typing_first(self):
         self.app.state = "listening"

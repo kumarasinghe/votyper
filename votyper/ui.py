@@ -262,14 +262,13 @@ class UI:
         self._refresh_meeting_widgets()
 
     def show_transcript_line(self, finished, live: str) -> None:
-        """Append a finished sentence, or show the sentence still being spoken (UI thread)."""
+        """Append a finished sentence, or show the unfinished one (UI thread)."""
         def edit(text):
             text.delete("live", "end-1c")           # drop the old guess of the live sentence
             if finished is None:
                 text.insert("live", live)
                 return
-            if finished:
-                text.insert("live", finished + "\n")
+            text.insert("live", finished + "\n\n")        # a blank line after each sentence
             text.mark_set("live", "end-1c")
         self._edit_transcript(edit)
 
@@ -277,7 +276,7 @@ class UI:
         def edit(text):
             text.delete("1.0", "end")
             for line in lines:
-                text.insert("end", line + "\n")
+                text.insert("end", line + "\n\n")
             text.mark_set("live", "end-1c")
             text.mark_gravity("live", "left")       # new text goes after the mark
             text.insert("live", live)
